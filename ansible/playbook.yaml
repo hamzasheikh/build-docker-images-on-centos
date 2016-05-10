@@ -1,0 +1,73 @@
+---
+- hosts: all
+  remote_user: vagrant
+  # vars:
+  # - ansible_python_interpreter: /usr/local/bin/python2.7
+  tasks:
+  - set_fact: colon=":"
+  - name: copy docker.repo
+    copy: src=../etc/yum.repos.d/docker.repo
+          dest=/etc/yum.repos.d/docker.repo
+    become: yes
+    become_user: root
+    become_method: sudo
+  - name: yum upgrade
+    yum: name=*
+         state=latest
+         update_cache=yes
+    become: yes
+    become_user: root
+    become_method: sudo
+  - name: yum install docker-engine
+    yum: name=docker-engine
+         state=latest
+    become: yes
+    become_user: root
+    become_method: sudo
+  - name: enable and start docker
+    service: name=docker
+             enabled=yes
+             state=started
+    become: yes
+    become_user: root
+    become_method: sudo
+  - name: create dir /home/vagrant/docker/mongo
+    file: path=/home/vagrant/docker/mongo state=directory
+  - name: copy mongo.repo
+    copy: src=../etc/yum.repos.d/mongo.repo
+          dest=/home/vagrant/docker/mongo/mongo.repo
+          owner=vagrant
+          group=vagrant
+          mode="u=rw,g=r,o=r"
+  - name: copy Dockerfile
+    copy: src=../docker/mongo/Dockerfile
+          dest=/home/vagrant/docker/mongo/Dockerfile
+          owner=vagrant
+          group=vagrant
+          mode="u=rw,g=r,o=r"
+  # - name: vagrant group sudo with nopasswd
+  #   lineinfile: dest=/etc/sudoers
+  #               line="%vagrant        ALL=(ALL)       NOPASSWD{{colon}} ALL"
+  #               state=present
+  #               insertafter=EOF
+  #   become: yes
+  #   become_user: root
+  #   become_method: sudo
+  - name: add user vagrant to group docker
+    user: name=vagrant
+          append=yes
+          groups="docker"
+    become: yes
+    become_user: root
+    become_method: sudo
+  # - name: restart machine
+  #   shell: sleep 2 && shutdown -r now "Ansible updates triggered"
+  #   async: 1
+  #   poll: 0
+  #   become: yes
+  #   become_user: root
+  #   become_method: sudo
+  #   ignore_errors: true
+  # - name: waiting for server to come back
+  #   local_action: wait_for state=started delay=30 timeout=60
+  #   become: no
